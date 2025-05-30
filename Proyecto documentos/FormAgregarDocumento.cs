@@ -130,9 +130,9 @@ namespace Proyecto_documentos
                 string nombreOriginal = Path.GetFileName(rutaArchivoSeleccionado);
 
                 // Verificar tamaño del archivo (limite de 50MB para evitar problemas)
-                if (tamanoBytes > 50 * 1024 * 1024)
+                if (tamanoBytes > 1L * 1024 * 1024 * 1024)
                 {
-                    lblMensaje.Text = "El archivo es demasiado grande (máximo 50MB).";
+                    lblMensaje.Text = "El archivo es demasiado grande (máximo 1GB).";
                     lblMensaje.ForeColor = Color.Red;
                     return;
                 }
@@ -290,10 +290,10 @@ namespace Proyecto_documentos
                     return false;
                 }
 
-                // Verificar tamaño (50MB máximo)
-                if (fileInfo.Length > 50 * 1024 * 1024)
+                // Verificar tamaño (1GB máximo)
+                if (fileInfo.Length > 1L * 1024 * 1024 * 1024)
                 {
-                    lblMensaje.Text = $"El archivo es demasiado grande ({FormatearTamano(fileInfo.Length)}). Máximo permitido: 50MB.";
+                    lblMensaje.Text = $"El archivo es demasiado grande ({FormatearTamano(fileInfo.Length)}). Máximo permitido: 1GB.";
                     lblMensaje.ForeColor = Color.Red;
                     return false;
                 }

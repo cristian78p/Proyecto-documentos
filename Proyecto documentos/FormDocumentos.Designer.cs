@@ -43,6 +43,14 @@
             this.colFechaModificacion = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colTipo = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colEtiquetas = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.panelBusquedaFiltros = new System.Windows.Forms.Panel();
+            this.lblResultados = new System.Windows.Forms.Label();
+            this.btnLimpiarFiltros = new System.Windows.Forms.Button();
+            this.cmbEtiquetas = new System.Windows.Forms.ComboBox();
+            this.lblFiltroEtiqueta = new System.Windows.Forms.Label();
+            this.btnBuscar = new System.Windows.Forms.Button();
+            this.txtBusqueda = new System.Windows.Forms.TextBox();
+            this.lblBusqueda = new System.Windows.Forms.Label();
             this.panelSuperior = new System.Windows.Forms.Panel();
             this.lblTitulo = new System.Windows.Forms.Label();
             this.panelBotones = new System.Windows.Forms.Panel();
@@ -56,6 +64,7 @@
             this.panelPrincipal.SuspendLayout();
             this.panelDocumentos.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvDocumentos)).BeginInit();
+            this.panelBusquedaFiltros.SuspendLayout();
             this.panelSuperior.SuspendLayout();
             this.panelBotones.SuspendLayout();
             this.SuspendLayout();
@@ -121,6 +130,7 @@
             // 
             this.panelPrincipal.BackColor = System.Drawing.Color.White;
             this.panelPrincipal.Controls.Add(this.panelDocumentos);
+            this.panelPrincipal.Controls.Add(this.panelBusquedaFiltros);
             this.panelPrincipal.Controls.Add(this.panelSuperior);
             this.panelPrincipal.Controls.Add(this.panelBotones);
             this.panelPrincipal.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -133,11 +143,11 @@
             // 
             this.panelDocumentos.Controls.Add(this.dgvDocumentos);
             this.panelDocumentos.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelDocumentos.Location = new System.Drawing.Point(0, 100);
+            this.panelDocumentos.Location = new System.Drawing.Point(0, 170);
             this.panelDocumentos.Name = "panelDocumentos";
             this.panelDocumentos.Padding = new System.Windows.Forms.Padding(20);
-            this.panelDocumentos.Size = new System.Drawing.Size(800, 600);
-            this.panelDocumentos.TabIndex = 4;
+            this.panelDocumentos.Size = new System.Drawing.Size(800, 530);
+            this.panelDocumentos.TabIndex = 5;
             // 
             // dgvDocumentos
             // 
@@ -158,7 +168,7 @@
             this.dgvDocumentos.Name = "dgvDocumentos";
             this.dgvDocumentos.ReadOnly = true;
             this.dgvDocumentos.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvDocumentos.Size = new System.Drawing.Size(760, 560);
+            this.dgvDocumentos.Size = new System.Drawing.Size(760, 490);
             this.dgvDocumentos.TabIndex = 0;
             this.dgvDocumentos.SelectionChanged += new System.EventHandler(this.dgvDocumentos_SelectionChanged);
             // 
@@ -204,6 +214,106 @@
             this.colEtiquetas.HeaderText = "Etiquetas";
             this.colEtiquetas.Name = "colEtiquetas";
             this.colEtiquetas.ReadOnly = true;
+            // 
+            // panelBusquedaFiltros
+            // 
+            this.panelBusquedaFiltros.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(248)))), ((int)(((byte)(249)))), ((int)(((byte)(250)))));
+            this.panelBusquedaFiltros.Controls.Add(this.lblResultados);
+            this.panelBusquedaFiltros.Controls.Add(this.btnLimpiarFiltros);
+            this.panelBusquedaFiltros.Controls.Add(this.cmbEtiquetas);
+            this.panelBusquedaFiltros.Controls.Add(this.lblFiltroEtiqueta);
+            this.panelBusquedaFiltros.Controls.Add(this.btnBuscar);
+            this.panelBusquedaFiltros.Controls.Add(this.txtBusqueda);
+            this.panelBusquedaFiltros.Controls.Add(this.lblBusqueda);
+            this.panelBusquedaFiltros.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panelBusquedaFiltros.Location = new System.Drawing.Point(0, 100);
+            this.panelBusquedaFiltros.Name = "panelBusquedaFiltros";
+            this.panelBusquedaFiltros.Size = new System.Drawing.Size(800, 70);
+            this.panelBusquedaFiltros.TabIndex = 4;
+            // 
+            // lblResultados
+            // 
+            this.lblResultados.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblResultados.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Italic);
+            this.lblResultados.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(108)))), ((int)(((byte)(117)))), ((int)(((byte)(125)))));
+            this.lblResultados.Location = new System.Drawing.Point(650, 45);
+            this.lblResultados.Name = "lblResultados";
+            this.lblResultados.Size = new System.Drawing.Size(130, 20);
+            this.lblResultados.TabIndex = 6;
+            this.lblResultados.Text = "0 documentos";
+            this.lblResultados.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // btnLimpiarFiltros
+            // 
+            this.btnLimpiarFiltros.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(108)))), ((int)(((byte)(117)))), ((int)(((byte)(125)))));
+            this.btnLimpiarFiltros.FlatAppearance.BorderSize = 0;
+            this.btnLimpiarFiltros.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLimpiarFiltros.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold);
+            this.btnLimpiarFiltros.ForeColor = System.Drawing.Color.White;
+            this.btnLimpiarFiltros.Location = new System.Drawing.Point(570, 10);
+            this.btnLimpiarFiltros.Name = "btnLimpiarFiltros";
+            this.btnLimpiarFiltros.Size = new System.Drawing.Size(80, 28);
+            this.btnLimpiarFiltros.TabIndex = 5;
+            this.btnLimpiarFiltros.Text = "Limpiar";
+            this.btnLimpiarFiltros.UseVisualStyleBackColor = false;
+            this.btnLimpiarFiltros.Click += new System.EventHandler(this.btnLimpiarFiltros_Click);
+            // 
+            // cmbEtiquetas
+            // 
+            this.cmbEtiquetas.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbEtiquetas.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cmbEtiquetas.FormattingEnabled = true;
+            this.cmbEtiquetas.Location = new System.Drawing.Point(415, 13);
+            this.cmbEtiquetas.Name = "cmbEtiquetas";
+            this.cmbEtiquetas.Size = new System.Drawing.Size(140, 23);
+            this.cmbEtiquetas.TabIndex = 4;
+            this.cmbEtiquetas.SelectedIndexChanged += new System.EventHandler(this.cmbEtiquetas_SelectedIndexChanged);
+            // 
+            // lblFiltroEtiqueta
+            // 
+            this.lblFiltroEtiqueta.AutoSize = true;
+            this.lblFiltroEtiqueta.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblFiltroEtiqueta.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(58)))), ((int)(((byte)(64)))));
+            this.lblFiltroEtiqueta.Location = new System.Drawing.Point(350, 16);
+            this.lblFiltroEtiqueta.Name = "lblFiltroEtiqueta";
+            this.lblFiltroEtiqueta.Size = new System.Drawing.Size(56, 15);
+            this.lblFiltroEtiqueta.TabIndex = 3;
+            this.lblFiltroEtiqueta.Text = "Etiqueta:";
+            // 
+            // btnBuscar
+            // 
+            this.btnBuscar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(41)))), ((int)(((byte)(128)))), ((int)(((byte)(185)))));
+            this.btnBuscar.FlatAppearance.BorderSize = 0;
+            this.btnBuscar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnBuscar.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnBuscar.ForeColor = System.Drawing.Color.White;
+            this.btnBuscar.Location = new System.Drawing.Point(270, 10);
+            this.btnBuscar.Name = "btnBuscar";
+            this.btnBuscar.Size = new System.Drawing.Size(70, 28);
+            this.btnBuscar.TabIndex = 2;
+            this.btnBuscar.Text = "Buscar";
+            this.btnBuscar.UseVisualStyleBackColor = false;
+            this.btnBuscar.Click += new System.EventHandler(this.btnBuscar_Click);
+            // 
+            // txtBusqueda
+            // 
+            this.txtBusqueda.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtBusqueda.Location = new System.Drawing.Point(80, 13);
+            this.txtBusqueda.Name = "txtBusqueda";
+            this.txtBusqueda.Size = new System.Drawing.Size(180, 23);
+            this.txtBusqueda.TabIndex = 1;
+            this.txtBusqueda.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.txtBusqueda_KeyPress);
+            // 
+            // lblBusqueda
+            // 
+            this.lblBusqueda.AutoSize = true;
+            this.lblBusqueda.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblBusqueda.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(52)))), ((int)(((byte)(58)))), ((int)(((byte)(64)))));
+            this.lblBusqueda.Location = new System.Drawing.Point(20, 16);
+            this.lblBusqueda.Name = "lblBusqueda";
+            this.lblBusqueda.Size = new System.Drawing.Size(47, 15);
+            this.lblBusqueda.TabIndex = 0;
+            this.lblBusqueda.Text = "Buscar:";
             // 
             // panelSuperior
             // 
@@ -321,12 +431,15 @@
             this.Name = "FormDocumentos";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Sistema de Gestión Documental";
+            this.Load += new System.EventHandler(this.FormDocumentos_Load);
             this.panelIzquierdo.ResumeLayout(false);
             this.panelIzquierdo.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picDocumento)).EndInit();
             this.panelPrincipal.ResumeLayout(false);
             this.panelDocumentos.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvDocumentos)).EndInit();
+            this.panelBusquedaFiltros.ResumeLayout(false);
+            this.panelBusquedaFiltros.PerformLayout();
             this.panelSuperior.ResumeLayout(false);
             this.panelSuperior.PerformLayout();
             this.panelBotones.ResumeLayout(false);
@@ -359,5 +472,13 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn colFechaModificacion;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTipo;
         private System.Windows.Forms.DataGridViewTextBoxColumn colEtiquetas;
+        private System.Windows.Forms.Panel panelBusquedaFiltros;
+        private System.Windows.Forms.Label lblBusqueda;
+        private System.Windows.Forms.TextBox txtBusqueda;
+        private System.Windows.Forms.Button btnBuscar;
+        private System.Windows.Forms.Label lblFiltroEtiqueta;
+        private System.Windows.Forms.ComboBox cmbEtiquetas;
+        private System.Windows.Forms.Button btnLimpiarFiltros;
+        private System.Windows.Forms.Label lblResultados;
     }
 }

@@ -13,6 +13,20 @@ namespace Proyecto_documentos
     {
         private Conexion conexionBD;
         private string usuarioActual;
+        private bool filtrandoPorEtiqueta = false;
+        private string terminoBusquedaActual = "";
+
+        // Clase para manejar etiquetas en el ComboBox
+        public class EtiquetaComboItem
+        {
+            public int Id { get; set; }
+            public string Nombre { get; set; }
+
+            public override string ToString()
+            {
+                return Nombre;
+            }
+        }
 
         public FormDocumentos(string email)
         {
@@ -21,8 +35,87 @@ namespace Proyecto_documentos
             usuarioActual = email;
             lblUsuarioActual.Text = "Usuario: " + email;
 
-            // Cargar documentos al iniciar
+            // Configurar controles
+            ConfigurarBusquedaFiltros();
+
+            // Cargar datos iniciales
+            CargarEtiquetasComboBox();
             CargarDocumentos();
+        }
+
+        private void ConfigurarBusquedaFiltros()
+        {
+            // Configurar ComboBox de etiquetas
+            cmbEtiquetas.DisplayMember = "Nombre";
+            cmbEtiquetas.ValueMember = "Id";
+
+            // Placeholder para el TextBox de búsqueda
+            txtBusqueda.Text = "Buscar por título o descripción...";
+            txtBusqueda.ForeColor = Color.Gray;
+            txtBusqueda.Enter += TxtBusqueda_Enter;
+            txtBusqueda.Leave += TxtBusqueda_Leave;
+        }
+
+        private void TxtBusqueda_Enter(object sender, EventArgs e)
+        {
+            if (txtBusqueda.Text == "Buscar por título o descripción...")
+            {
+                txtBusqueda.Text = "";
+                txtBusqueda.ForeColor = Color.Black;
+            }
+        }
+
+        private void TxtBusqueda_Leave(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtBusqueda.Text))
+            {
+                txtBusqueda.Text = "Buscar por título o descripción...";
+                txtBusqueda.ForeColor = Color.Gray;
+            }
+        }
+
+        private void CargarEtiquetasComboBox()
+        {
+            try
+            {
+                // Limpiar ComboBox
+                cmbEtiquetas.Items.Clear();
+
+                // Agregar opción "Todas"
+                cmbEtiquetas.Items.Add(new EtiquetaComboItem { Id = -1, Nombre = "Todas las etiquetas" });
+
+                // Obtener etiquetas que tienen documentos del usuario actual
+                string consulta = @"
+                    SELECT DISTINCT e.id_etiqueta, e.nombre 
+                    FROM Etiqueta e
+                    INNER JOIN DocumentoEtiqueta de ON e.id_etiqueta = de.id_etiqueta
+                    INNER JOIN Documento d ON de.id_documento = d.id_documento
+                    INNER JOIN Usuario u ON d.id_creador = u.id_usuario
+                    WHERE u.correo = '" + usuarioActual + @"'
+                    ORDER BY e.nombre";
+
+                DataTable etiquetas = conexionBD.EjecutarConsulta(consulta);
+
+                if (etiquetas != null && etiquetas.Rows.Count > 0)
+                {
+                    foreach (DataRow row in etiquetas.Rows)
+                    {
+                        cmbEtiquetas.Items.Add(new EtiquetaComboItem
+                        {
+                            Id = Convert.ToInt32(row["id_etiqueta"]),
+                            Nombre = row["nombre"].ToString()
+                        });
+                    }
+                }
+
+                // Seleccionar "Todas las etiquetas" por defecto
+                cmbEtiquetas.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al cargar etiquetas: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void picDocumento_Paint(object sender, PaintEventArgs e)
@@ -44,15 +137,52 @@ namespace Proyecto_documentos
                 // Limpiar tabla
                 dgvDocumentos.Rows.Clear();
 
-                // Consulta SQL actualizada para incluir los nuevos campos BLOB usando tu clase Conexion
-                string consulta = $@"
-                    SELECT d.id_documento, d.titulo, d.descripcion, d.fecha_creacion, 
-                           d.fecha_modificacion, d.formato_archivo, d.tamano_bytes, 
-                           d.nombre_original, d.tipo_mime
+                // Construir consulta base
+                string consultaBase = @"
+                    SELECT 
+                        d.id_documento, 
+                        d.titulo, 
+                        d.descripcion, 
+                        d.fecha_creacion, 
+                        d.fecha_modificacion, 
+                        d.formato_archivo, 
+                        d.tamano_bytes, 
+                        d.nombre_original, 
+                        d.tipo_mime,
+                        STUFF((
+                            SELECT ', ' + e.nombre
+                            FROM DocumentoEtiqueta de
+                            INNER JOIN Etiqueta e ON de.id_etiqueta = e.id_etiqueta
+                            WHERE de.id_documento = d.id_documento
+                            ORDER BY e.nombre
+                            FOR XML PATH('')
+                        ), 1, 2, '') AS etiquetas
                     FROM Documento d
                     JOIN Usuario u ON d.id_creador = u.id_usuario
-                    WHERE u.correo = '{usuarioActual}' AND d.contenido_archivo IS NOT NULL
-                    ORDER BY d.fecha_creacion DESC";
+                    WHERE u.correo = '{0}' AND d.contenido_archivo IS NOT NULL";
+
+                string consulta = string.Format(consultaBase, usuarioActual);
+
+                // Agregar filtros si existen
+                if (!string.IsNullOrEmpty(terminoBusquedaActual))
+                {
+                    consulta += string.Format(@" AND (d.titulo LIKE '%{0}%' OR d.descripcion LIKE '%{0}%')",
+                        terminoBusquedaActual.Replace("'", "''"));
+                }
+
+                if (filtrandoPorEtiqueta && cmbEtiquetas.SelectedItem != null)
+                {
+                    EtiquetaComboItem etiquetaSeleccionada = (EtiquetaComboItem)cmbEtiquetas.SelectedItem;
+                    if (etiquetaSeleccionada.Id != -1)
+                    {
+                        consulta += string.Format(@" AND d.id_documento IN (
+                            SELECT de.id_documento 
+                            FROM DocumentoEtiqueta de 
+                            WHERE de.id_etiqueta = {0})", etiquetaSeleccionada.Id);
+                    }
+                }
+
+                consulta += " ORDER BY d.fecha_creacion DESC";
 
                 DataTable datosDocumentos = conexionBD.EjecutarConsulta(consulta);
 
@@ -60,8 +190,9 @@ namespace Proyecto_documentos
                 {
                     foreach (DataRow row in datosDocumentos.Rows)
                     {
-                        // Obtener etiquetas para este documento
-                        string etiquetas = ObtenerEtiquetasDocumento(row["id_documento"].ToString());
+                        // Obtener etiquetas directamente de la consulta
+                        string etiquetas = row["etiquetas"] != DBNull.Value ?
+                            row["etiquetas"].ToString() : "-";
 
                         // Formatear tamaño del archivo
                         string tamanoFormateado = "N/A";
@@ -92,16 +223,29 @@ namespace Proyecto_documentos
                     }
                 }
 
-                // Actualizar contador de documentos si tienes el label
-                if (this.Controls.ContainsKey("lblContadorDocumentos"))
-                {
-                    ((Label)this.Controls["lblContadorDocumentos"]).Text = $"Total: {dgvDocumentos.Rows.Count} documentos";
-                }
+                // Actualizar contador de resultados
+                ActualizarContadorResultados();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error al cargar documentos: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ActualizarContadorResultados()
+        {
+            int totalDocumentos = dgvDocumentos.Rows.Count;
+
+            if (filtrandoPorEtiqueta || !string.IsNullOrEmpty(terminoBusquedaActual))
+            {
+                lblResultados.Text = $"{totalDocumentos} resultado(s)";
+                lblResultados.ForeColor = Color.FromArgb(40, 167, 69); // Verde para resultados filtrados
+            }
+            else
+            {
+                lblResultados.Text = $"{totalDocumentos} documento(s)";
+                lblResultados.ForeColor = Color.FromArgb(108, 117, 125); // Gris para total normal
             }
         }
 
@@ -120,102 +264,104 @@ namespace Proyecto_documentos
             return $"{tamano:F2} {unidades[unidadIndex]}";
         }
 
-        private string ObtenerEtiquetasDocumento(string documentoId)
+        private void btnBuscar_Click(object sender, EventArgs e)
         {
-            try
+            EjecutarBusqueda();
+        }
+
+        private void txtBusqueda_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Permitir búsqueda con Enter
+            if (e.KeyChar == (char)Keys.Enter)
             {
-                // Consulta usando tu clase Conexion
-                string consulta = $@"
-                    SELECT e.nombre 
-                    FROM Etiqueta e
-                    INNER JOIN DocumentoEtiqueta de ON e.id_etiqueta = de.id_etiqueta
-                    WHERE de.id_documento = {documentoId}";
-
-                DataTable datos = conexionBD.EjecutarConsulta(consulta);
-
-                if (datos != null && datos.Rows.Count > 0)
-                {
-                    string etiquetas = "";
-                    foreach (DataRow row in datos.Rows)
-                    {
-                        if (etiquetas.Length > 0) etiquetas += ", ";
-                        etiquetas += row["nombre"].ToString();
-                    }
-                    return etiquetas;
-                }
-
-                return "-";
-            }
-            catch (Exception ex)
-            {
-                return "-"; // En caso de error
+                EjecutarBusqueda();
+                e.Handled = true;
             }
         }
 
-        private void FiltrarPorEtiqueta(string etiquetaId)
+        private void EjecutarBusqueda()
         {
             try
             {
-                // Consulta usando tu clase Conexion
-                string consulta = $@"
-                    SELECT d.id_documento, d.titulo, d.descripcion, d.fecha_creacion, 
-                           d.fecha_modificacion, d.formato_archivo, d.tamano_bytes, 
-                           d.nombre_original, d.tipo_mime
-                    FROM Documento d
-                    JOIN Usuario u ON d.id_creador = u.id_usuario
-                    JOIN DocumentoEtiqueta de ON d.id_documento = de.id_documento
-                    WHERE de.id_etiqueta = {etiquetaId} AND u.correo = '{usuarioActual}' 
-                    AND d.contenido_archivo IS NOT NULL";
+                // Obtener término de búsqueda
+                string busqueda = txtBusqueda.Text.Trim();
 
-                DataTable datosDocumentos = conexionBD.EjecutarConsulta(consulta);
-
-                // Limpiar tabla
-                dgvDocumentos.Rows.Clear();
-
-                if (datosDocumentos != null && datosDocumentos.Rows.Count > 0)
+                // No buscar si es el placeholder
+                if (busqueda == "Buscar por título o descripción...")
                 {
-                    foreach (DataRow row in datosDocumentos.Rows)
-                    {
-                        // Obtener etiquetas para este documento
-                        string etiquetas = ObtenerEtiquetasDocumento(row["id_documento"].ToString());
-
-                        // Formatear tamaño del archivo
-                        string tamanoFormateado = "N/A";
-                        if (row["tamano_bytes"] != DBNull.Value)
-                        {
-                            long tamanoBytes = Convert.ToInt64(row["tamano_bytes"]);
-                            tamanoFormateado = FormatearTamano(tamanoBytes);
-                        }
-
-                        // Obtener nombre original o usar título + formato
-                        string nombreArchivo = row["nombre_original"] != DBNull.Value ?
-                            row["nombre_original"].ToString() :
-                            $"{row["titulo"]}.{row["formato_archivo"]}";
-
-                        // Agregar a la tabla
-                        dgvDocumentos.Rows.Add(
-                            row["id_documento"],
-                            row["titulo"],
-                            row["descripcion"],
-                            Convert.ToDateTime(row["fecha_creacion"]).ToString("dd/MM/yyyy"),
-                            row["fecha_modificacion"] == DBNull.Value ? "-" :
-                                Convert.ToDateTime(row["fecha_modificacion"]).ToString("dd/MM/yyyy"),
-                            row["formato_archivo"],
-                            etiquetas,
-                            tamanoFormateado,
-                            nombreArchivo
-                        );
-                    }
+                    busqueda = "";
                 }
 
-                if (this.Controls.ContainsKey("lblContadorDocumentos"))
+                terminoBusquedaActual = busqueda;
+
+                // Recargar documentos con filtro
+                CargarDocumentos();
+
+                // Mostrar mensaje si no hay resultados
+                if (dgvDocumentos.Rows.Count == 0 && !string.IsNullOrEmpty(terminoBusquedaActual))
                 {
-                    ((Label)this.Controls["lblContadorDocumentos"]).Text = $"Filtrados: {dgvDocumentos.Rows.Count} documentos";
+                    MessageBox.Show($"No se encontraron documentos que contengan '{terminoBusquedaActual}'",
+                        "Sin resultados", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al filtrar documentos: " + ex.Message, "Error",
+                MessageBox.Show("Error al realizar búsqueda: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void cmbEtiquetas_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (cmbEtiquetas.SelectedItem != null)
+                {
+                    EtiquetaComboItem etiquetaSeleccionada = (EtiquetaComboItem)cmbEtiquetas.SelectedItem;
+
+                    // Si selecciona "Todas las etiquetas", desactivar filtro
+                    if (etiquetaSeleccionada.Id == -1)
+                    {
+                        filtrandoPorEtiqueta = false;
+                    }
+                    else
+                    {
+                        filtrandoPorEtiqueta = true;
+                    }
+
+                    // Recargar documentos con filtro
+                    CargarDocumentos();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al filtrar por etiqueta: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnLimpiarFiltros_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Limpiar búsqueda
+                txtBusqueda.Text = "Buscar por título o descripción...";
+                txtBusqueda.ForeColor = Color.Gray;
+                terminoBusquedaActual = "";
+
+                // Limpiar filtro de etiqueta
+                cmbEtiquetas.SelectedIndex = 0; // Seleccionar "Todas las etiquetas"
+                filtrandoPorEtiqueta = false;
+
+                // Recargar todos los documentos
+                CargarDocumentos();
+
+                MessageBox.Show("Filtros limpiados. Mostrando todos los documentos.", "Filtros",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al limpiar filtros: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -227,38 +373,39 @@ namespace Proyecto_documentos
             btnDescargar.Enabled = haySeleccion;
             btnEliminar.Enabled = haySeleccion;
             btnEditar.Enabled = haySeleccion;
+            btnVerEtiquetas.Enabled = haySeleccion;
         }
 
         private void btnVerEtiquetas_Click(object sender, EventArgs e)
         {
+            if (dgvDocumentos.SelectedRows.Count == 0)
             {
-                if (dgvDocumentos.SelectedRows.Count == 0)
-                {
-                    MessageBox.Show("Seleccione un documento para gestionar sus etiquetas.", "Información",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
+                MessageBox.Show("Seleccione un documento para gestionar sus etiquetas.", "Información",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
-                try
-                {
-                    // Obtener información del documento seleccionado
-                    DataGridViewRow filaSeleccionada = dgvDocumentos.SelectedRows[0];
-                    int idDocumento = Convert.ToInt32(filaSeleccionada.Cells[0].Value); // id_documento
-                    string titulo = filaSeleccionada.Cells[1].Value.ToString(); // titulo
+            try
+            {
+                // Obtener información del documento seleccionado
+                DataGridViewRow filaSeleccionada = dgvDocumentos.SelectedRows[0];
+                int idDocumento = Convert.ToInt32(filaSeleccionada.Cells[0].Value); // id_documento
+                string titulo = filaSeleccionada.Cells[1].Value.ToString(); // titulo
 
-                    // Abrir formulario de gestión de etiquetas
-                    FormGestionarEtiquetas formEtiquetas = new FormGestionarEtiquetas(conexionBD, idDocumento, titulo);
-                    if (formEtiquetas.ShowDialog() == DialogResult.OK)
-                    {
-                        // Recargar la lista de documentos para actualizar las etiquetas mostradas
-                        CargarDocumentos();
-                    }
-                }
-                catch (Exception ex)
+                // Abrir formulario de gestión de etiquetas
+                FormGestionarEtiquetas formEtiquetas = new FormGestionarEtiquetas(conexionBD, idDocumento, titulo);
+                if (formEtiquetas.ShowDialog() == DialogResult.OK)
                 {
-                    MessageBox.Show("Error al gestionar etiquetas: " + ex.Message, "Error",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Recargar la lista de documentos para actualizar las etiquetas mostradas
+                    CargarDocumentos();
+                    // Recargar también el ComboBox de etiquetas por si se agregaron nuevas
+                    CargarEtiquetasComboBox();
                 }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al gestionar etiquetas: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -268,6 +415,7 @@ namespace Proyecto_documentos
             if (form.ShowDialog() == DialogResult.OK)
             {
                 CargarDocumentos();
+                CargarEtiquetasComboBox(); // Recargar etiquetas por si se agregaron nuevas
             }
         }
 
@@ -478,8 +626,9 @@ namespace Proyecto_documentos
                     MessageBox.Show($"Documento '{titulo}' eliminado exitosamente.", "Éxito",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Recargar la lista de documentos
+                    // Recargar la lista de documentos y etiquetas
                     CargarDocumentos();
+                    CargarEtiquetasComboBox();
                 }
                 else
                 {
@@ -530,6 +679,11 @@ namespace Proyecto_documentos
                 MessageBox.Show("Error al editar documento: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void FormDocumentos_Load(object sender, EventArgs e)
+        {
+
         }
     }
 }
